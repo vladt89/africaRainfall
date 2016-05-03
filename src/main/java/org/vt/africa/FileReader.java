@@ -48,18 +48,31 @@ public class FileReader {
         }
 
         if (sheet != null) {
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            int lastRowNum = 39; // only for 3 years
+            for (int i = 1; i <= lastRowNum; i++) {
+                if (i == 13 || i == 26 || i == 39) { // all +13, skip one line
+                    continue;
+                }
                 Row row = sheet.getRow(i);
                 double sumForMonth = 0.0;
                 for (int j = FIRST_DAY_MEASUREMENT; j < LAST_DAY_MEASUREMENT; j++) {
-                    Cell column = row.getCell(j);
-                    double numericCellValue = column.getNumericCellValue();
+                    Cell cell = row.getCell(j);
+                    double numericCellValue = cell.getNumericCellValue();
                     sumForMonth += numericCellValue;
                 }
                 Cell cell = row.getCell(LAST_DAY_MEASUREMENT);
-                if (cell == null || "".equals(cell.toString())) {
-                    Cell sumColumn = row.createCell(LAST_DAY_MEASUREMENT);
-                    sumColumn.setCellValue(sumForMonth);
+                if (cell != null && !"".equals(cell.toString())) {
+                    String cellFormula = cell.getCellFormula();
+                    String index = String.valueOf(i + 1);
+                    String expectedFormula = "SUM(K" + index + ":AO" + index + ")";
+                    if (!expectedFormula.equals(cellFormula)) {
+                        throw new RuntimeException("Formula is wrong. Expected: " + expectedFormula + ", but was " + cellFormula);
+                    }
+                    double numericCellValue = cell.getNumericCellValue();
+                    if (Double.compare(numericCellValue, sumForMonth) != 0) {
+                        throw new RuntimeException("Sum for month is wrong. " +
+                                "Original: " + numericCellValue + " calculated: " + sumForMonth);
+                    }
                 }
                 System.out.println("month: " + row.getCell(MONTH_COLUMN) + " year: " + row.getCell(YEAR_COLUMN) + " SUM: " + sumForMonth);
             }
