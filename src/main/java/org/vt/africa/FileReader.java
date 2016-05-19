@@ -78,6 +78,22 @@ public class FileReader {
                 }
                 System.out.println("month: " + row.getCell(MONTH_COLUMN) + " year: " + row.getCell(YEAR_COLUMN) + " SUM: " + sumForMonth);
             }
+            Cell meanCellTitle = firstRow.createCell(LAST_DAY_MEASUREMENT + 1);
+            meanCellTitle.setCellValue("Mean of 2 years");
+            for (int i = 1; i < 13; i++) {
+                Row row = sheet.getRow(i);
+                Cell meanCell = row.createCell(LAST_DAY_MEASUREMENT + 1);
+                String index = String.valueOf(i + 1);
+                String nextIndex = String.valueOf(i + 14);
+                String expectedFormula = "(AP" + index + "+AP" + nextIndex + ")/2";
+                meanCell.setCellFormula(expectedFormula);
+            }
+            Row row = sheet.getRow(13);
+            Cell meanCellSum = row.createCell(LAST_DAY_MEASUREMENT + 1);
+            String index = String.valueOf(2);
+            String nextIndex = String.valueOf(13);
+            String expectedFormula = "SUM(AQ" + index + ":AQ" + nextIndex + ")";
+            meanCellSum.setCellFormula(expectedFormula);
         }
 
         FileOutputStream outFile = null;
