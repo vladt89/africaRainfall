@@ -59,7 +59,9 @@ public class FileReader {
                 Cell cell = row.getCell(LAST_DAY_MEASUREMENT);
                 if (cell == null || "".equals(cell.toString())) {
                     Cell sumColumn = row.createCell(LAST_DAY_MEASUREMENT);
-                    sumColumn.setCellValue(sumForMonth);
+                    String index = String.valueOf(i + 1);
+                    String expectedFormula = "SUM(K" + index + ":AO" + index + ")";
+                    sumColumn.setCellFormula(expectedFormula);
                 }
                 System.out.println("month: " + row.getCell(MONTH_COLUMN) + " year: " + row.getCell(YEAR_COLUMN) + " SUM: " + sumForMonth);
             }
