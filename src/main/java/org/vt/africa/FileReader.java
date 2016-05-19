@@ -48,7 +48,20 @@ public class FileReader {
         }
 
         if (sheet != null) {
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            int lastRowNum = sheet.getLastRowNum();
+            Row firstRow = sheet.getRow(0);
+            Cell sumCell = firstRow.createCell(LAST_DAY_MEASUREMENT);
+            sumCell.setCellValue("Sum");
+            for (int i = 1; i <= lastRowNum + 1; i++) {
+                if (i == 13 || i == 26) { // all +13, skip one line
+                    sheet.shiftRows(i, lastRowNum, 1);
+                    Row row = sheet.createRow(i);
+                    Cell sumColumn = row.createCell(LAST_DAY_MEASUREMENT);
+                    String index = String.valueOf(i - 11);
+                    String expectedFormula = "SUM(AP" + index + ":AP" + i + ")";
+                    sumColumn.setCellFormula(expectedFormula);
+                    continue;
+                }
                 Row row = sheet.getRow(i);
                 double sumForMonth = 0.0;
                 for (int j = FIRST_DAY_MEASUREMENT; j < LAST_DAY_MEASUREMENT; j++) {
