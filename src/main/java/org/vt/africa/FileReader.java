@@ -52,17 +52,20 @@ public class FileReader {
             Row firstRow = sheet.getRow(0);
             Cell sumCell = firstRow.createCell(LAST_DAY_MEASUREMENT);
             sumCell.setCellValue("Sum");
-            for (int i = 1; i <= lastRowNum + 1; i++) {
+            for (int i = 1; i <= lastRowNum + 2; i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) {
+                    break;
+                }
                 if (i == 13 || i == 26) { // all +13, skip one line
-                    sheet.shiftRows(i, lastRowNum, 1);
-                    Row row = sheet.createRow(i);
-                    Cell sumColumn = row.createCell(LAST_DAY_MEASUREMENT);
+                    sheet.shiftRows(i, lastRowNum + 1, 1);
+                    Row newRow = sheet.createRow(i);
+                    Cell sumColumn = newRow.createCell(LAST_DAY_MEASUREMENT);
                     String index = String.valueOf(i - 11);
                     String expectedFormula = "SUM(AP" + index + ":AP" + i + ")";
                     sumColumn.setCellFormula(expectedFormula);
                     continue;
                 }
-                Row row = sheet.getRow(i);
                 double sumForMonth = 0.0;
                 for (int j = FIRST_DAY_MEASUREMENT; j < LAST_DAY_MEASUREMENT; j++) {
                     Cell column = row.getCell(j);
