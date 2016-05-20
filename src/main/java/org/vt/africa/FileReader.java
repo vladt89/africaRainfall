@@ -1,15 +1,20 @@
 package org.vt.africa;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.ClientAnchor;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFClientAnchor;
+import org.apache.poi.xssf.usermodel.XSSFDrawing;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartUtilities;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.data.category.DefaultCategoryDataset;
+
+import java.io.*;
 
 /**
  * @author vladimir.tikhomirov
@@ -97,6 +102,8 @@ public class FileReader {
             String nextIndex = String.valueOf(13);
             String expectedFormula = "SUM(AQ" + index + ":AQ" + nextIndex + ")";
             meanCellSum.setCellFormula(expectedFormula);
+
+            createDiagram(workbook, sheet);
         }
 
         FileOutputStream outFile = null;
@@ -122,5 +129,37 @@ public class FileReader {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void createDiagram(XSSFWorkbook workbook, XSSFSheet sheet) {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        for (int i = 1; i < 13; i++) {
+            Row currentRow = sheet.getRow(i);
+            Cell meanCell = currentRow.getCell(LAST_DAY_MEASUREMENT + 1);
+            double value = meanCell.getNumericCellValue();
+            dataset.addValue(value, "Marks", "1");
+        }
+        JFreeChart BarChartObject = ChartFactory.createBarChart(
+                "Subject Vs Marks", "Subject", "Marks", dataset,
+                PlotOrientation.VERTICAL, true, true, false);
+        int width = 640;
+        int height = 480;
+        ByteArrayOutputStream chart_out = new ByteArrayOutputStream();
+        try {
+            ChartUtilities.writeChartAsPNG(chart_out,BarChartObject,width,height);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        int myPictureId = workbook.addPicture(chart_out.toByteArray(), Workbook.PICTURE_TYPE_PNG);
+        try {
+            chart_out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        XSSFDrawing drawing = sheet.createDrawingPatriarch();
+        ClientAnchor my_anchor = new XSSFClientAnchor();
+        my_anchor.setCol1(4);
+        my_anchor.setRow1(5);
+        drawing.createPicture(my_anchor, myPictureId);
     }
 }
