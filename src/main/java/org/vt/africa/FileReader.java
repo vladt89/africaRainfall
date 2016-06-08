@@ -48,34 +48,55 @@ public class FileReader {
         }
 
         if (sheet != null) {
-            int lastRowNum = 39; // only for 3 years
-            for (int i = 1; i <= lastRowNum; i++) {
-                if (i == 13 || i == 26 || i == 39) { // all +13, skip one line
+            int lastRowNum = sheet.getLastRowNum();
+            Row firstRow = sheet.getRow(0);
+            Cell sumCell = firstRow.createCell(LAST_DAY_MEASUREMENT);
+            sumCell.setCellValue("Sum");
+            for (int i = 1; i <= lastRowNum + 2; i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) {
+                    break;
+                }
+                if (i == 13 || i == 26) { // all +13, skip one line
+                    sheet.shiftRows(i, lastRowNum + 1, 1);
+                    Row newRow = sheet.createRow(i);
+                    Cell sumColumn = newRow.createCell(LAST_DAY_MEASUREMENT);
+                    String index = String.valueOf(i - 11);
+                    String expectedFormula = "SUM(AP" + index + ":AP" + i + ")";
+                    sumColumn.setCellFormula(expectedFormula);
                     continue;
                 }
-                Row row = sheet.getRow(i);
                 double sumForMonth = 0.0;
                 for (int j = FIRST_DAY_MEASUREMENT; j < LAST_DAY_MEASUREMENT; j++) {
-                    Cell cell = row.getCell(j);
-                    double numericCellValue = cell.getNumericCellValue();
+                    Cell column = row.getCell(j);
+                    double numericCellValue = column.getNumericCellValue();
                     sumForMonth += numericCellValue;
                 }
                 Cell cell = row.getCell(LAST_DAY_MEASUREMENT);
-                if (cell != null && !"".equals(cell.toString())) {
-                    String cellFormula = cell.getCellFormula();
+                if (cell == null || "".equals(cell.toString())) {
+                    Cell sumColumn = row.createCell(LAST_DAY_MEASUREMENT);
                     String index = String.valueOf(i + 1);
                     String expectedFormula = "SUM(K" + index + ":AO" + index + ")";
-                    if (!expectedFormula.equals(cellFormula)) {
-                        throw new RuntimeException("Formula is wrong. Expected: " + expectedFormula + ", but was " + cellFormula);
-                    }
-                    double numericCellValue = cell.getNumericCellValue();
-                    if (Double.compare(numericCellValue, sumForMonth) != 0) {
-                        throw new RuntimeException("Sum for month is wrong. " +
-                                "Original: " + numericCellValue + " calculated: " + sumForMonth);
-                    }
+                    sumColumn.setCellFormula(expectedFormula);
                 }
                 System.out.println("month: " + row.getCell(MONTH_COLUMN) + " year: " + row.getCell(YEAR_COLUMN) + " SUM: " + sumForMonth);
             }
+            Cell meanCellTitle = firstRow.createCell(LAST_DAY_MEASUREMENT + 1);
+            meanCellTitle.setCellValue("Mean of 2 years");
+            for (int i = 1; i < 13; i++) {
+                Row row = sheet.getRow(i);
+                Cell meanCell = row.createCell(LAST_DAY_MEASUREMENT + 1);
+                String index = String.valueOf(i + 1);
+                String nextIndex = String.valueOf(i + 14);
+                String expectedFormula = "(AP" + index + "+AP" + nextIndex + ")/2";
+                meanCell.setCellFormula(expectedFormula);
+            }
+            Row row = sheet.getRow(13);
+            Cell meanCellSum = row.createCell(LAST_DAY_MEASUREMENT + 1);
+            String index = String.valueOf(2);
+            String nextIndex = String.valueOf(13);
+            String expectedFormula = "SUM(AQ" + index + ":AQ" + nextIndex + ")";
+            meanCellSum.setCellFormula(expectedFormula);
         }
 
         FileOutputStream outFile = null;
