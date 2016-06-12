@@ -138,9 +138,14 @@ public class FileReader {
         }
 
         List<Double> meanList = calculateMeanValues(sheet, firstRow, sumList);
+        calculateAbsDiffValues(sheet, firstRow, sumList);
         createMeanSumFormula(sheet.getRow(13));
         createDiagram(workbook, sheet, meanList);
 
+        writeOutput(file, workbook);
+    }
+
+    private void writeOutput(File file, XSSFWorkbook workbook) {
         FileOutputStream outFile = null;
         try {
             outFile = new FileOutputStream(new File(file.getPath()));
@@ -207,6 +212,39 @@ public class FileReader {
             meanList.add(meanValue);
         }
         return meanList;
+    }
+
+    private List<Double> calculateAbsDiffValues(XSSFSheet sheet, Row firstRow, List<MonthInYear> sumList) {
+        Cell meanCellTitle = firstRow.createCell(LAST_DAY_MEASUREMENT + 2);
+        meanCellTitle.setCellValue("Abs. diff.");
+        List<Double> absDiffList = new ArrayList<>();
+        for (int i = 1; i < 13; i++) {
+            Row row = sheet.getRow(i);
+            Cell absDiffCell = row.createCell(LAST_DAY_MEASUREMENT + 2);
+            String firstYearIndex = String.valueOf(i + 1);
+            String secondYearIndex = String.valueOf(i + 14);
+            String absDiffFormula;
+            double absoluteDiff;
+            if (MEAN_YEAR == 3) {
+//                String thirdYearIndex = String.valueOf(i + 27);
+//                absDiffFormula = "(" + SUM_COLUMN_NAME + firstYearIndex + "+" +
+//                        SUM_COLUMN_NAME + secondYearIndex + "+" +
+//                        SUM_COLUMN_NAME + thirdYearIndex + ")" +
+//                        "/" + MEAN_YEAR;
+//                double sumForFirstYear = sumList.get(i - 1).getSum();
+//                double sumForSecondYear = sumList.get(i + 11).getSum();
+//                double sumForThirdYear = sumList.get(i + 23).getSum();
+//                absoluteDiff = (sumForFirstYear + sumForSecondYear + sumForThirdYear) / MEAN_YEAR;
+            } else if (MEAN_YEAR == 2) {
+                absDiffFormula = SUM_COLUMN_NAME + firstYearIndex + "-" + SUM_COLUMN_NAME + secondYearIndex;
+                double sumForFirstYear = sumList.get(i - 1).getSum();
+                double sumForSecondYear = sumList.get(i + 11).getSum();
+                absoluteDiff = sumForFirstYear - sumForSecondYear;
+            }
+            absDiffCell.setCellFormula(absDiffFormula);
+            absDiffList.add(absoluteDiff);
+        }
+        return absDiffList;
     }
 
     private int colorMissingMonthRows(CellStyle style, XSSFSheet sheet) {
