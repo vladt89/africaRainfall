@@ -37,7 +37,8 @@ public class FileReader {
     private static final int MONTH_COLUMN = 8;
     private static final int YEAR_COLUMN = 7;
     private static final int MONTH_CELL_COLUMN = 8;
-    private static final int MEAN_YEAR = 3;
+    private static final String SUM_COLUMN_NAME = "AP";
+    private static final int MEAN_YEAR = 2;
 
     public void fetchDataFromFile(File file) {
         FileInputStream inputStream = null;
@@ -134,32 +135,8 @@ public class FileReader {
             sumList.add(new MonthInYear(month, year, sumForMonth));
             System.out.println("month: " + month + " year: " + year + " SUM: " + sumForMonth);
         }
-        Cell meanCellTitle = firstRow.createCell(LAST_DAY_MEASUREMENT + 1);
-        meanCellTitle.setCellValue("Mean of " + MEAN_YEAR + " years");
-        List<Double> meanList = new ArrayList<>();
-        for (int i = 1; i < 13; i++) {
-            Row row = sheet.getRow(i);
-            Cell meanCell = row.createCell(LAST_DAY_MEASUREMENT + 1);
-            String index = String.valueOf(i + 1);
-            String nextIndex = String.valueOf(i + 14);
-            String expectedFormula;
-            double expectedResult;
-            if (MEAN_YEAR == 3) {
-                String lastIndex = String.valueOf(i + 27);
-                expectedFormula = "(AP" + index + "+AP" + nextIndex + "+AP" + lastIndex + ")/" + MEAN_YEAR;
-                double sumForFirstYear = sumList.get(i - 1).getSum();
-                double sumForSecondYear = sumList.get(i + 11).getSum();
-                double sumForThirdYear = sumList.get(i + 23).getSum();
-                expectedResult = (sumForFirstYear + sumForSecondYear + sumForThirdYear) / MEAN_YEAR;
-            } else if (MEAN_YEAR == 2) {
-                expectedFormula = "(AP" + index + "+AP" + nextIndex + ")/" + MEAN_YEAR;
-                double sumForFirstYear = sumList.get(i - 1).getSum();
-                double sumForSecondYear = sumList.get(i + 11).getSum();
-                expectedResult = (sumForFirstYear + sumForSecondYear) / MEAN_YEAR;
-            }
-            meanCell.setCellFormula(expectedFormula);
-            meanList.add(expectedResult);
-        }
+        List<Double> meanList = calculateMeanValues(sheet, firstRow, sumList);
+
         Row row = sheet.getRow(13);
         Cell meanCellSum = row.createCell(LAST_DAY_MEASUREMENT + 1);
         String index = String.valueOf(2);
@@ -192,6 +169,41 @@ public class FileReader {
                 e.printStackTrace();
             }
         }
+    }
+
+    private List<Double> calculateMeanValues(XSSFSheet sheet, Row firstRow, List<MonthInYear> sumList) {
+        Cell meanCellTitle = firstRow.createCell(LAST_DAY_MEASUREMENT + 1);
+        meanCellTitle.setCellValue("Mean of " + MEAN_YEAR + " years");
+        List<Double> meanList = new ArrayList<>();
+        for (int i = 1; i < 13; i++) {
+            Row row = sheet.getRow(i);
+            Cell meanCell = row.createCell(LAST_DAY_MEASUREMENT + 1);
+            String firstYearIndex = String.valueOf(i + 1);
+            String secondYearIndex = String.valueOf(i + 14);
+            String meanFormula;
+            double meanValue;
+            if (MEAN_YEAR == 3) {
+                String thirdYearIndex = String.valueOf(i + 27);
+                meanFormula = "(" + SUM_COLUMN_NAME + firstYearIndex + "+" +
+                        SUM_COLUMN_NAME + secondYearIndex + "+" +
+                        SUM_COLUMN_NAME + thirdYearIndex + ")" +
+                        "/" + MEAN_YEAR;
+                double sumForFirstYear = sumList.get(i - 1).getSum();
+                double sumForSecondYear = sumList.get(i + 11).getSum();
+                double sumForThirdYear = sumList.get(i + 23).getSum();
+                meanValue = (sumForFirstYear + sumForSecondYear + sumForThirdYear) / MEAN_YEAR;
+            } else if (MEAN_YEAR == 2) {
+                meanFormula = "(" + SUM_COLUMN_NAME + firstYearIndex + "+" +
+                        SUM_COLUMN_NAME + secondYearIndex + ")" +
+                        "/" + MEAN_YEAR;
+                double sumForFirstYear = sumList.get(i - 1).getSum();
+                double sumForSecondYear = sumList.get(i + 11).getSum();
+                meanValue = (sumForFirstYear + sumForSecondYear) / MEAN_YEAR;
+            }
+            meanCell.setCellFormula(meanFormula);
+            meanList.add(meanValue);
+        }
+        return meanList;
     }
 
     private int colorMissingMonthRows(CellStyle style, XSSFSheet sheet) {
