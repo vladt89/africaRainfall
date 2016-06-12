@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DateFormatSymbols;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -47,7 +48,7 @@ public class FileReader {
     private static final int MONTH_CELL_COLUMN = 8;
     private static final String SUM_COLUMN_NAME = "AP";
     private static final String MEAN_COLUMN_NAME = "AQ";
-    private static final int MEAN_YEAR = 3;
+    private static final int AMOUNT_OF_FULL_YEARS = 2;
     private static final int MAX_MONTH = 12;
 
     public void fetchDataFromFile(File file) {
@@ -147,12 +148,13 @@ public class FileReader {
         }
 
         List<Double> meanList = calculateMeanValues(sheet, firstRow, sumList);
-        calculateAbsDiffValues(sheet, firstRow);
+        List<Double> absDiffValues = calculateAbsDiffValues(sheet, firstRow, sumList);
         calculatePercentDiffValues(sheet, firstRow);
         fillMonthNames(sheet, firstRow);
         fillPrecipitationRawValues(sheet, firstRow, meanList);
         createMeanSumFormula(sheet.getRow(MAX_MONTH + 1));
         createMeanDiagram(workbook, sheet, meanList);
+        createAbsDiffDiagram(workbook, sheet, absDiffValues);
 
         writeOutput(file, workbook);
     }
@@ -193,7 +195,7 @@ public class FileReader {
 
     private List<Double> calculateMeanValues(XSSFSheet sheet, Row firstRow, List<MonthInYear> sumList) {
         Cell meanCellTitle = firstRow.createCell(MEAN_SUM_INDEX);
-        meanCellTitle.setCellValue("Mean of " + MEAN_YEAR + " years");
+        meanCellTitle.setCellValue("Mean of " + AMOUNT_OF_FULL_YEARS + " years");
         List<Double> meanList = new ArrayList<>();
         for (int i = 1; i <= MAX_MONTH; i++) {
             Row row = sheet.getRow(i);
@@ -202,23 +204,23 @@ public class FileReader {
             String secondYearIndex = String.valueOf(i + 14);
             String meanFormula;
             double meanValue;
-            if (MEAN_YEAR == 3) {
+            if (AMOUNT_OF_FULL_YEARS == 3) {
                 String thirdYearIndex = String.valueOf(i + 27);
                 meanFormula = "(" + SUM_COLUMN_NAME + firstYearIndex + "+" +
                         SUM_COLUMN_NAME + secondYearIndex + "+" +
                         SUM_COLUMN_NAME + thirdYearIndex + ")" +
-                        "/" + MEAN_YEAR;
+                        "/" + AMOUNT_OF_FULL_YEARS;
                 double sumForFirstYear = sumList.get(i - 1).getSum();
                 double sumForSecondYear = sumList.get(i + 11).getSum();
                 double sumForThirdYear = sumList.get(i + 23).getSum();
-                meanValue = (sumForFirstYear + sumForSecondYear + sumForThirdYear) / MEAN_YEAR;
-            } else if (MEAN_YEAR == 2) {
+                meanValue = (sumForFirstYear + sumForSecondYear + sumForThirdYear) / AMOUNT_OF_FULL_YEARS;
+            } else if (AMOUNT_OF_FULL_YEARS == 2) {
                 meanFormula = "(" + SUM_COLUMN_NAME + firstYearIndex + "+" +
                         SUM_COLUMN_NAME + secondYearIndex + ")" +
-                        "/" + MEAN_YEAR;
+                        "/" + AMOUNT_OF_FULL_YEARS;
                 double sumForFirstYear = sumList.get(i - 1).getSum();
                 double sumForSecondYear = sumList.get(i + 11).getSum();
-                meanValue = (sumForFirstYear + sumForSecondYear) / MEAN_YEAR;
+                meanValue = (sumForFirstYear + sumForSecondYear) / AMOUNT_OF_FULL_YEARS;
             }
             meanCell.setCellFormula(meanFormula);
             meanList.add(meanValue);
@@ -226,16 +228,18 @@ public class FileReader {
         return meanList;
     }
 
-    private void calculateAbsDiffValues(XSSFSheet sheet, Row firstRow) {
+    private List<Double> calculateAbsDiffValues(XSSFSheet sheet, Row firstRow, List<MonthInYear> sumList) {
         Cell meanCellTitle = firstRow.createCell(ABS_DIFF_INDEX);
         meanCellTitle.setCellValue("Abs. diff.");
+        List<Double> absDiffList = new ArrayList<>();
         for (int i = 1; i <= MAX_MONTH; i++) {
             Row row = sheet.getRow(i);
             Cell absDiffCell = row.createCell(ABS_DIFF_INDEX);
             String firstYearIndex = String.valueOf(i + 1);
             String secondYearIndex = String.valueOf(i + 14);
             String absDiffFormula;
-            if (MEAN_YEAR == 3) {
+            double absoluteDiff;
+            if (AMOUNT_OF_FULL_YEARS == 3) {
                 String thirdYearIndex = String.valueOf(i + 27);
                 absDiffFormula = "MAX(" + SUM_COLUMN_NAME + firstYearIndex + "," +
                         SUM_COLUMN_NAME + secondYearIndex + "," +
@@ -244,11 +248,26 @@ public class FileReader {
                         "MIN(" + SUM_COLUMN_NAME + firstYearIndex + "," +
                         SUM_COLUMN_NAME + secondYearIndex + "," +
                         SUM_COLUMN_NAME + thirdYearIndex + ")";
-            } else if (MEAN_YEAR == 2) {
+                double sumForFirstYear = sumList.get(i - 1).getSum();
+                double sumForSecondYear = sumList.get(i + 11).getSum();
+                double sumForThirdYear = sumList.get(i + 23).getSum();
+                List<Double> list = new ArrayList<>();
+                list.add(sumForFirstYear);
+                list.add(sumForSecondYear);
+                list.add(sumForThirdYear);
+                Double max = Collections.max(list);
+                Double min = Collections.min(list);
+                absoluteDiff = max - min;
+            } else if (AMOUNT_OF_FULL_YEARS == 2) {
                 absDiffFormula = SUM_COLUMN_NAME + firstYearIndex + "-" + SUM_COLUMN_NAME + secondYearIndex;
+                double sumForFirstYear = sumList.get(i - 1).getSum();
+                double sumForSecondYear = sumList.get(i + 11).getSum();
+                absoluteDiff = sumForFirstYear - sumForSecondYear;
             }
             absDiffCell.setCellFormula(absDiffFormula);
+            absDiffList.add(absoluteDiff);
         }
+        return absDiffList;
     }
 
     private void calculatePercentDiffValues(XSSFSheet sheet, Row firstRow) {
@@ -325,11 +344,26 @@ public class FileReader {
             data.addValue(meanList.get(i - 1), "Mean value", i + "");
         }
         String title = createMeanTitle(sheet);
-        JFreeChart BarChartObject = ChartFactory.createBarChart(title, "Month", "Mean value",
-                data, PlotOrientation.VERTICAL, true, true, false);
-        int width = 540;
-        int height = 480;
+        createDiagram(workbook, sheet, data, title, "Mean value", 0);
+    }
 
+    private void createAbsDiffDiagram(XSSFWorkbook workbook, XSSFSheet sheet, List<Double> absDiffList) {
+        DefaultCategoryDataset data = new DefaultCategoryDataset();
+        for (int i = 1; i <= MAX_MONTH; i++) {
+            data.addValue(absDiffList.get(i - 1), "Absolute diff", i + "");
+        }
+        String title = createAbsTitle(sheet);
+        createDiagram(workbook, sheet, data, title, "Absolute difference", 24);
+    }
+
+    private void createDiagram(XSSFWorkbook workbook, XSSFSheet sheet, DefaultCategoryDataset data,
+                               String title, String xName, int rowNum) {
+
+        JFreeChart BarChartObject = ChartFactory.createBarChart(title, "Month", xName,
+                data, PlotOrientation.VERTICAL, true, true, false);
+
+        int width = 540;
+        int height = 440;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         try {
             ChartUtilities.writeChartAsPNG(byteArrayOutputStream, BarChartObject, width, height);
@@ -345,19 +379,30 @@ public class FileReader {
         XSSFDrawing drawing = sheet.createDrawingPatriarch();
 
         ClientAnchor anchor = new XSSFClientAnchor();
-        anchor.setCol1(42);
-        anchor.setRow1(14);
+        anchor.setCol1(47);
+        anchor.setRow1(rowNum);
         XSSFPicture picture = drawing.createPicture(anchor, pictureId);
         picture.resize();
     }
 
     private String createMeanTitle(XSSFSheet sheet) {
-        String title = "Mean of " + MEAN_YEAR + " years ";
+        String title = "Mean of " + AMOUNT_OF_FULL_YEARS + " years ";
+        title = generateYearsForTitle(sheet, title);
+        return title;
+    }
+
+    private String createAbsTitle(XSSFSheet sheet) {
+        String title = "Absolute difference of " + AMOUNT_OF_FULL_YEARS + " years ";
+        title = generateYearsForTitle(sheet, title);
+        return title;
+    }
+
+    private String generateYearsForTitle(XSSFSheet sheet, String title) {
         String firstYear = fetchStringCellValue(sheet, 1, 7);
         String secondYear = fetchStringCellValue(sheet, 14, 7);
-        if (MEAN_YEAR == 2) {
+        if (AMOUNT_OF_FULL_YEARS == 2) {
             title = title + "(" + firstYear + ", " + secondYear + ")";
-        } else if (MEAN_YEAR == 3) {
+        } else if (AMOUNT_OF_FULL_YEARS == 3) {
             String thirdYear = fetchStringCellValue(sheet, 27, 7);
             title = title + "(" + firstYear + ", " + secondYear + ", " + thirdYear + ")";
         }
