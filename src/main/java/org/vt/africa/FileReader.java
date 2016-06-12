@@ -39,6 +39,7 @@ public class FileReader {
     private static final int ABS_DIFF_INDEX = LAST_DAY_MEASUREMENT + 2;
     private static final int PERCENT_DIFF_INDEX = LAST_DAY_MEASUREMENT + 3;
     private static final int MONTH_NAME_INDEX = LAST_DAY_MEASUREMENT + 4;
+    private static final int PREC_RAW_VALUES_INDEX = LAST_DAY_MEASUREMENT + 5;
     private static final int MONTH_COLUMN = 8;
     private static final int YEAR_COLUMN = 7;
     private static final int MONTH_CELL_COLUMN = 8;
@@ -147,6 +148,7 @@ public class FileReader {
         calculateAbsDiffValues(sheet, firstRow, sumList);
         calculatePercentDiffValues(sheet, firstRow);
         fillMonthNames(sheet, firstRow);
+        fillPrecipitationRawValues(sheet, firstRow, meanList);
         createMeanSumFormula(sheet.getRow(MAX_MONTH + 1));
         createDiagram(workbook, sheet, meanList);
 
@@ -275,6 +277,16 @@ public class FileReader {
             Row row = sheet.getRow(i);
             Cell monthNameCell = row.createCell(MONTH_NAME_INDEX);
             monthNameCell.setCellValue(months[i - 1]);
+        }
+    }
+
+    private void fillPrecipitationRawValues(XSSFSheet sheet, Row firstRow, List<Double> meanList) {
+        Cell precRawIndex = firstRow.createCell(PREC_RAW_VALUES_INDEX);
+        precRawIndex.setCellValue("Precip (mm)");
+        for (int i = 1; i <= MAX_MONTH; i++) {
+            Row row = sheet.getRow(i);
+            Cell precValueCell = row.createCell(PREC_RAW_VALUES_INDEX);
+            precValueCell.setCellValue(meanList.get(i - 1));
         }
     }
 
