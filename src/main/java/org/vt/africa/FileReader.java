@@ -37,6 +37,7 @@ public class FileReader {
     private static final int MONTH_COLUMN = 8;
     private static final int YEAR_COLUMN = 7;
     private static final int MONTH_CELL_COLUMN = 8;
+    private static final int MEAN_YEAR = 3;
 
     public void fetchDataFromFile(File file) {
         FileInputStream inputStream = null;
@@ -83,6 +84,7 @@ public class FileReader {
         Row firstRow = sheet.getRow(0);
         Cell sumCell = firstRow.createCell(LAST_DAY_MEASUREMENT);
         sumCell.setCellValue("Sum");
+        List<MonthInYear> sumList = new ArrayList<>();
         for (int i = 1; i <= lastRowNum; i++) {
             Row row = sheet.getRow(i);
             if (row == null) {
@@ -116,19 +118,47 @@ public class FileReader {
                 String expectedFormula = "SUM(K" + index + ":AO" + index + ")";
                 sumColumn.setCellFormula(expectedFormula);
             }
-            System.out.println("month: " + row.getCell(MONTH_COLUMN) + " year: " + row.getCell(YEAR_COLUMN) + " SUM: " + sumForMonth);
+            Cell monthCell = row.getCell(MONTH_COLUMN);
+            String stringMonthValue;
+            double month = 0.0;
+            if (monthCell != null) {
+                stringMonthValue = monthCell.getStringCellValue();
+                month = Double.valueOf(stringMonthValue);
+            }
+            Cell yearCell = row.getCell(YEAR_COLUMN);
+            double year = 0.0;
+            if (yearCell != null) {
+                String stringYearValue = yearCell.getStringCellValue();
+                year = Double.valueOf(stringYearValue);
+            }
+            sumList.add(new MonthInYear(month, year, sumForMonth));
+            System.out.println("month: " + month + " year: " + year + " SUM: " + sumForMonth);
         }
         Cell meanCellTitle = firstRow.createCell(LAST_DAY_MEASUREMENT + 1);
-        int meanYear = 3;
-        meanCellTitle.setCellValue("Mean of " + meanYear + " years");
+        meanCellTitle.setCellValue("Mean of " + MEAN_YEAR + " years");
+        List<Double> meanList = new ArrayList<>();
         for (int i = 1; i < 13; i++) {
             Row row = sheet.getRow(i);
             Cell meanCell = row.createCell(LAST_DAY_MEASUREMENT + 1);
             String index = String.valueOf(i + 1);
             String nextIndex = String.valueOf(i + 14);
-            String lastIndex = String.valueOf(i + 27);
-            String expectedFormula = "(AP" + index + "+AP" + nextIndex + "+AP" + lastIndex + ")/" + meanYear;
+            String expectedFormula;
+            double expectedResult;
+            if (MEAN_YEAR == 3) {
+                String lastIndex = String.valueOf(i + 27);
+                expectedFormula = "(AP" + index + "+AP" + nextIndex + "+AP" + lastIndex + ")/" + MEAN_YEAR;
+                double sumForFirstYear = sumList.get(i - 1).getSum();
+                double sumForSecondYear = sumList.get(i + 11).getSum();
+                double sumForThirdYear = sumList.get(i + 23).getSum();
+                expectedResult = (sumForFirstYear + sumForSecondYear + sumForThirdYear) / MEAN_YEAR;
+            } else if (MEAN_YEAR == 2) {
+                expectedFormula = "(AP" + index + "+AP" + nextIndex + ")/" + MEAN_YEAR;
+                double sumForFirstYear = sumList.get(i - 1).getSum();
+                double sumForSecondYear = sumList.get(i + 11).getSum();
+                expectedResult = (sumForFirstYear + sumForSecondYear) / MEAN_YEAR;
+            }
             meanCell.setCellFormula(expectedFormula);
+            meanList.add(expectedResult);
         }
         Row row = sheet.getRow(13);
         Cell meanCellSum = row.createCell(LAST_DAY_MEASUREMENT + 1);
@@ -137,7 +167,7 @@ public class FileReader {
         String expectedFormula = "SUM(AQ" + index + ":AQ" + nextIndex + ")";
         meanCellSum.setCellFormula(expectedFormula);
 
-//        createDiagram(workbook, sheet);
+        createDiagram(workbook, sheet, meanList);
 
         FileOutputStream outFile = null;
         try {
@@ -199,18 +229,13 @@ public class FileReader {
         return rowAmount;
     }
 
-    // TODO fix this => correct names and correct data.
-    private void createDiagram(XSSFWorkbook workbook, XSSFSheet sheet) {
+    private void createDiagram(XSSFWorkbook workbook, XSSFSheet sheet, List<Double> meanList) {
         DefaultCategoryDataset data = new DefaultCategoryDataset();
         for (int i = 1; i < 13; i++) {
-            Row row = sheet.getRow(i);
-            Cell meanCell = row.getCell(LAST_DAY_MEASUREMENT + 1);
-            double numericCellValue = meanCell.getNumericCellValue();
-            // TODO put the proper value
-            data.addValue(10 + i + numericCellValue, "Marks", i + "");
+            data.addValue(meanList.get(i - 1), "Mean value", i + "");
         }
 
-        JFreeChart BarChartObject = ChartFactory.createBarChart("Mean of 2 years", "Subject", "Marks",
+        JFreeChart BarChartObject = ChartFactory.createBarChart("Mean of " + MEAN_YEAR + " years", "Month", "Mean value",
                 data, PlotOrientation.VERTICAL, true, true, false);
         int width = 640;
         int height = 480;
@@ -230,8 +255,8 @@ public class FileReader {
         XSSFDrawing drawing = sheet.createDrawingPatriarch();
 
         ClientAnchor anchor = new XSSFClientAnchor();
-        anchor.setCol1(4);
-        anchor.setRow1(5);
+        anchor.setCol1(43);
+        anchor.setRow1(16);
         XSSFPicture picture = drawing.createPicture(anchor, pictureId);
         picture.resize();
     }
