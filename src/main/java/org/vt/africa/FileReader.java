@@ -16,10 +16,12 @@ import org.apache.poi.ss.usermodel.ClientAnchor;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFClientAnchor;
 import org.apache.poi.xssf.usermodel.XSSFDrawing;
 import org.apache.poi.xssf.usermodel.XSSFPicture;
+import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.jfree.chart.ChartFactory;
@@ -150,7 +152,7 @@ public class FileReader {
         fillMonthNames(sheet, firstRow);
         fillPrecipitationRawValues(sheet, firstRow, meanList);
         createMeanSumFormula(sheet.getRow(MAX_MONTH + 1));
-        createDiagram(workbook, sheet, meanList);
+        createMeanDiagram(workbook, sheet, meanList);
 
         writeOutput(file, workbook);
     }
@@ -317,15 +319,15 @@ public class FileReader {
         return rowAmount;
     }
 
-    private void createDiagram(XSSFWorkbook workbook, XSSFSheet sheet, List<Double> meanList) {
+    private void createMeanDiagram(XSSFWorkbook workbook, XSSFSheet sheet, List<Double> meanList) {
         DefaultCategoryDataset data = new DefaultCategoryDataset();
         for (int i = 1; i <= MAX_MONTH; i++) {
             data.addValue(meanList.get(i - 1), "Mean value", i + "");
         }
-
-        JFreeChart BarChartObject = ChartFactory.createBarChart("Mean of " + MEAN_YEAR + " years", "Month", "Mean value",
+        String title = createMeanTitle(sheet);
+        JFreeChart BarChartObject = ChartFactory.createBarChart(title, "Month", "Mean value",
                 data, PlotOrientation.VERTICAL, true, true, false);
-        int width = 640;
+        int width = 540;
         int height = 480;
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -343,9 +345,28 @@ public class FileReader {
         XSSFDrawing drawing = sheet.createDrawingPatriarch();
 
         ClientAnchor anchor = new XSSFClientAnchor();
-        anchor.setCol1(43);
-        anchor.setRow1(16);
+        anchor.setCol1(42);
+        anchor.setRow1(14);
         XSSFPicture picture = drawing.createPicture(anchor, pictureId);
         picture.resize();
+    }
+
+    private String createMeanTitle(XSSFSheet sheet) {
+        String title = "Mean of " + MEAN_YEAR + " years ";
+        String firstYear = fetchStringCellValue(sheet, 1, 7);
+        String secondYear = fetchStringCellValue(sheet, 14, 7);
+        if (MEAN_YEAR == 2) {
+            title = title + "(" + firstYear + ", " + secondYear + ")";
+        } else if (MEAN_YEAR == 3) {
+            String thirdYear = fetchStringCellValue(sheet, 27, 7);
+            title = title + "(" + firstYear + ", " + secondYear + ", " + thirdYear + ")";
+        }
+        return title;
+    }
+
+    private String fetchStringCellValue(XSSFSheet sheet, int rowNumber, int cellNumber) {
+        XSSFRow sheetRow = sheet.getRow(rowNumber);
+        XSSFCell cell = sheetRow.getCell(cellNumber);
+        return cell.getStringCellValue();
     }
 }
