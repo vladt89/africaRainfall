@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.DateFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,6 +38,7 @@ public class FileReader {
     private static final int MEAN_SUM_INDEX = LAST_DAY_MEASUREMENT + 1;
     private static final int ABS_DIFF_INDEX = LAST_DAY_MEASUREMENT + 2;
     private static final int PERCENT_DIFF_INDEX = LAST_DAY_MEASUREMENT + 3;
+    private static final int MONTH_NAME_INDEX = LAST_DAY_MEASUREMENT + 4;
     private static final int MONTH_COLUMN = 8;
     private static final int YEAR_COLUMN = 7;
     private static final int MONTH_CELL_COLUMN = 8;
@@ -126,16 +128,16 @@ public class FileReader {
             }
             Cell monthCell = row.getCell(MONTH_COLUMN);
             String stringMonthValue;
-            double month = 0.0;
+            int month = 0;
             if (monthCell != null) {
                 stringMonthValue = monthCell.getStringCellValue();
-                month = Double.valueOf(stringMonthValue);
+                month = Integer.valueOf(stringMonthValue);
             }
             Cell yearCell = row.getCell(YEAR_COLUMN);
-            double year = 0.0;
+            int year = 0;
             if (yearCell != null) {
                 String stringYearValue = yearCell.getStringCellValue();
-                year = Double.valueOf(stringYearValue);
+                year = Integer.valueOf(stringYearValue);
             }
             sumList.add(new MonthInYear(month, year, sumForMonth));
             System.out.println("month: " + month + " year: " + year + " SUM: " + sumForMonth);
@@ -144,6 +146,7 @@ public class FileReader {
         List<Double> meanList = calculateMeanValues(sheet, firstRow, sumList);
         calculateAbsDiffValues(sheet, firstRow, sumList);
         calculatePercentDiffValues(sheet, firstRow);
+        fillMonthNames(sheet, firstRow);
         createMeanSumFormula(sheet.getRow(MAX_MONTH + 1));
         createDiagram(workbook, sheet, meanList);
 
@@ -261,6 +264,17 @@ public class FileReader {
             String sameMonthValue = String.valueOf(i + 1);
             String percentDiffFormula = "IFERROR((AR" + sameMonthValue + "*100)/AQ" + sameMonthValue + ", 0)";
             percentDiffCell.setCellFormula(percentDiffFormula);
+        }
+    }
+
+    private void fillMonthNames(XSSFSheet sheet, Row firstRow) {
+        Cell monthTitle = firstRow.createCell(MONTH_NAME_INDEX);
+        monthTitle.setCellValue("Month");
+        String[] months = new DateFormatSymbols().getMonths();
+        for (int i = 1; i <= MAX_MONTH; i++) {
+            Row row = sheet.getRow(i);
+            Cell monthNameCell = row.createCell(MONTH_NAME_INDEX);
+            monthNameCell.setCellValue(months[i - 1]);
         }
     }
 
