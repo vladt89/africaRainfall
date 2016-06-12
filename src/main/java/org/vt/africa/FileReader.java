@@ -38,6 +38,7 @@ public class FileReader {
     private static final int YEAR_COLUMN = 7;
     private static final int MONTH_CELL_COLUMN = 8;
     private static final String SUM_COLUMN_NAME = "AP";
+    private static final String MEAN_COLUMN_NAME = "AQ";
     private static final int MEAN_YEAR = 2;
 
     public void fetchDataFromFile(File file) {
@@ -135,15 +136,9 @@ public class FileReader {
             sumList.add(new MonthInYear(month, year, sumForMonth));
             System.out.println("month: " + month + " year: " + year + " SUM: " + sumForMonth);
         }
+
         List<Double> meanList = calculateMeanValues(sheet, firstRow, sumList);
-
-        Row row = sheet.getRow(13);
-        Cell meanCellSum = row.createCell(LAST_DAY_MEASUREMENT + 1);
-        String index = String.valueOf(2);
-        String nextIndex = String.valueOf(13);
-        String expectedFormula = "SUM(AQ" + index + ":AQ" + nextIndex + ")";
-        meanCellSum.setCellFormula(expectedFormula);
-
+        createMeanSumFormula(sheet.getRow(13));
         createDiagram(workbook, sheet, meanList);
 
         FileOutputStream outFile = null;
@@ -169,6 +164,14 @@ public class FileReader {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void createMeanSumFormula(Row row) {
+        Cell meanCellSum = row.createCell(LAST_DAY_MEASUREMENT + 1);
+        String beginMeanValue = String.valueOf(2);
+        String endMeanValue = String.valueOf(13);
+        String expectedFormula = "SUM(" + MEAN_COLUMN_NAME + beginMeanValue + ":" + MEAN_COLUMN_NAME + endMeanValue + ")";
+        meanCellSum.setCellFormula(expectedFormula);
     }
 
     private List<Double> calculateMeanValues(XSSFSheet sheet, Row firstRow, List<MonthInYear> sumList) {
