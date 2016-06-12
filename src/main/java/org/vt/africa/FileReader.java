@@ -45,7 +45,7 @@ public class FileReader {
     private static final int MONTH_CELL_COLUMN = 8;
     private static final String SUM_COLUMN_NAME = "AP";
     private static final String MEAN_COLUMN_NAME = "AQ";
-    private static final int MEAN_YEAR = 2;
+    private static final int MEAN_YEAR = 3;
     private static final int MAX_MONTH = 12;
 
     public void fetchDataFromFile(File file) {
@@ -145,7 +145,7 @@ public class FileReader {
         }
 
         List<Double> meanList = calculateMeanValues(sheet, firstRow, sumList);
-        calculateAbsDiffValues(sheet, firstRow, sumList);
+        calculateAbsDiffValues(sheet, firstRow);
         calculatePercentDiffValues(sheet, firstRow);
         fillMonthNames(sheet, firstRow);
         fillPrecipitationRawValues(sheet, firstRow, meanList);
@@ -224,37 +224,29 @@ public class FileReader {
         return meanList;
     }
 
-    private List<Double> calculateAbsDiffValues(XSSFSheet sheet, Row firstRow, List<MonthInYear> sumList) {
+    private void calculateAbsDiffValues(XSSFSheet sheet, Row firstRow) {
         Cell meanCellTitle = firstRow.createCell(ABS_DIFF_INDEX);
         meanCellTitle.setCellValue("Abs. diff.");
-        List<Double> absDiffList = new ArrayList<>();
         for (int i = 1; i <= MAX_MONTH; i++) {
             Row row = sheet.getRow(i);
             Cell absDiffCell = row.createCell(ABS_DIFF_INDEX);
             String firstYearIndex = String.valueOf(i + 1);
             String secondYearIndex = String.valueOf(i + 14);
             String absDiffFormula;
-            double absoluteDiff;
             if (MEAN_YEAR == 3) {
-//                String thirdYearIndex = String.valueOf(i + 27);
-//                absDiffFormula = "(" + SUM_COLUMN_NAME + firstYearIndex + "+" +
-//                        SUM_COLUMN_NAME + secondYearIndex + "+" +
-//                        SUM_COLUMN_NAME + thirdYearIndex + ")" +
-//                        "/" + MEAN_YEAR;
-//                double sumForFirstYear = sumList.get(i - 1).getSum();
-//                double sumForSecondYear = sumList.get(i + 11).getSum();
-//                double sumForThirdYear = sumList.get(i + 23).getSum();
-//                absoluteDiff = (sumForFirstYear + sumForSecondYear + sumForThirdYear) / MEAN_YEAR;
+                String thirdYearIndex = String.valueOf(i + 27);
+                absDiffFormula = "MAX(" + SUM_COLUMN_NAME + firstYearIndex + "," +
+                        SUM_COLUMN_NAME + secondYearIndex + "," +
+                        SUM_COLUMN_NAME + thirdYearIndex + ")" +
+                            "-" +
+                        "MIN(" + SUM_COLUMN_NAME + firstYearIndex + "," +
+                        SUM_COLUMN_NAME + secondYearIndex + "," +
+                        SUM_COLUMN_NAME + thirdYearIndex + ")";
             } else if (MEAN_YEAR == 2) {
                 absDiffFormula = SUM_COLUMN_NAME + firstYearIndex + "-" + SUM_COLUMN_NAME + secondYearIndex;
-                double sumForFirstYear = sumList.get(i - 1).getSum();
-                double sumForSecondYear = sumList.get(i + 11).getSum();
-                absoluteDiff = sumForFirstYear - sumForSecondYear;
             }
             absDiffCell.setCellFormula(absDiffFormula);
-            absDiffList.add(absoluteDiff);
         }
-        return absDiffList;
     }
 
     private void calculatePercentDiffValues(XSSFSheet sheet, Row firstRow) {
