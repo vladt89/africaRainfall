@@ -34,12 +34,16 @@ public class FileReader {
 
     private static final int FIRST_DAY_MEASUREMENT = 10;
     private static final int LAST_DAY_MEASUREMENT = FIRST_DAY_MEASUREMENT + 31;
+    private static final int MEAN_SUM_INDEX = LAST_DAY_MEASUREMENT + 1;
+    private static final int ABS_DIFF_INDEX = LAST_DAY_MEASUREMENT + 2;
+    private static final int PERCENT_DIFF_INDEX = LAST_DAY_MEASUREMENT + 3;
     private static final int MONTH_COLUMN = 8;
     private static final int YEAR_COLUMN = 7;
     private static final int MONTH_CELL_COLUMN = 8;
     private static final String SUM_COLUMN_NAME = "AP";
     private static final String MEAN_COLUMN_NAME = "AQ";
     private static final int MEAN_YEAR = 2;
+    private static final int MAX_MONTH = 12;
 
     public void fetchDataFromFile(File file) {
         FileInputStream inputStream = null;
@@ -139,7 +143,8 @@ public class FileReader {
 
         List<Double> meanList = calculateMeanValues(sheet, firstRow, sumList);
         calculateAbsDiffValues(sheet, firstRow, sumList);
-        createMeanSumFormula(sheet.getRow(13));
+        calculatePercentDiffValues(sheet, firstRow);
+        createMeanSumFormula(sheet.getRow(MAX_MONTH + 1));
         createDiagram(workbook, sheet, meanList);
 
         writeOutput(file, workbook);
@@ -172,7 +177,7 @@ public class FileReader {
     }
 
     private void createMeanSumFormula(Row row) {
-        Cell meanCellSum = row.createCell(LAST_DAY_MEASUREMENT + 1);
+        Cell meanCellSum = row.createCell(MEAN_SUM_INDEX);
         String beginMeanValue = String.valueOf(2);
         String endMeanValue = String.valueOf(13);
         String expectedFormula = "SUM(" + MEAN_COLUMN_NAME + beginMeanValue + ":" + MEAN_COLUMN_NAME + endMeanValue + ")";
@@ -180,12 +185,12 @@ public class FileReader {
     }
 
     private List<Double> calculateMeanValues(XSSFSheet sheet, Row firstRow, List<MonthInYear> sumList) {
-        Cell meanCellTitle = firstRow.createCell(LAST_DAY_MEASUREMENT + 1);
+        Cell meanCellTitle = firstRow.createCell(MEAN_SUM_INDEX);
         meanCellTitle.setCellValue("Mean of " + MEAN_YEAR + " years");
         List<Double> meanList = new ArrayList<>();
-        for (int i = 1; i < 13; i++) {
+        for (int i = 1; i <= MAX_MONTH; i++) {
             Row row = sheet.getRow(i);
-            Cell meanCell = row.createCell(LAST_DAY_MEASUREMENT + 1);
+            Cell meanCell = row.createCell(MEAN_SUM_INDEX);
             String firstYearIndex = String.valueOf(i + 1);
             String secondYearIndex = String.valueOf(i + 14);
             String meanFormula;
@@ -215,12 +220,12 @@ public class FileReader {
     }
 
     private List<Double> calculateAbsDiffValues(XSSFSheet sheet, Row firstRow, List<MonthInYear> sumList) {
-        Cell meanCellTitle = firstRow.createCell(LAST_DAY_MEASUREMENT + 2);
+        Cell meanCellTitle = firstRow.createCell(ABS_DIFF_INDEX);
         meanCellTitle.setCellValue("Abs. diff.");
         List<Double> absDiffList = new ArrayList<>();
-        for (int i = 1; i < 13; i++) {
+        for (int i = 1; i <= MAX_MONTH; i++) {
             Row row = sheet.getRow(i);
-            Cell absDiffCell = row.createCell(LAST_DAY_MEASUREMENT + 2);
+            Cell absDiffCell = row.createCell(ABS_DIFF_INDEX);
             String firstYearIndex = String.valueOf(i + 1);
             String secondYearIndex = String.valueOf(i + 14);
             String absDiffFormula;
@@ -245,6 +250,18 @@ public class FileReader {
             absDiffList.add(absoluteDiff);
         }
         return absDiffList;
+    }
+
+    private void calculatePercentDiffValues(XSSFSheet sheet, Row firstRow) {
+        Cell percentDiffTitle = firstRow.createCell(PERCENT_DIFF_INDEX);
+        percentDiffTitle.setCellValue("Diff in %");
+        for (int i = 1; i <= MAX_MONTH; i++) {
+            Row row = sheet.getRow(i);
+            Cell percentDiffCell = row.createCell(PERCENT_DIFF_INDEX);
+            String sameMonthValue = String.valueOf(i + 1);
+            String percentDiffFormula = "IFERROR((AR" + sameMonthValue + "*100)/AQ" + sameMonthValue + ", 0)";
+            percentDiffCell.setCellFormula(percentDiffFormula);
+        }
     }
 
     private int colorMissingMonthRows(CellStyle style, XSSFSheet sheet) {
@@ -284,7 +301,7 @@ public class FileReader {
 
     private void createDiagram(XSSFWorkbook workbook, XSSFSheet sheet, List<Double> meanList) {
         DefaultCategoryDataset data = new DefaultCategoryDataset();
-        for (int i = 1; i < 13; i++) {
+        for (int i = 1; i <= MAX_MONTH; i++) {
             data.addValue(meanList.get(i - 1), "Mean value", i + "");
         }
 
