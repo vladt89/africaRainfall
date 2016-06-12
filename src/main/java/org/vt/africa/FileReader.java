@@ -100,8 +100,8 @@ public class FileReader {
                 newRow.setRowStyle(yellowStyle);
                 Cell sumColumn = newRow.createCell(LAST_DAY_MEASUREMENT);
                 String index = String.valueOf(i - 11);
-                String expectedFormula = "SUM(AP" + index + ":AP" + i + ")";
-                sumColumn.setCellFormula(expectedFormula);
+                String sumFormula = "SUM(" + SUM_COLUMN_NAME + index + ":" + SUM_COLUMN_NAME + i + ")";
+                sumColumn.setCellFormula(sumFormula);
                 continue;
             }
             double sumForMonth = 0.0;
